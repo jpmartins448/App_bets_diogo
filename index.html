@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apostas Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sidebar-w: 272px;
+    --ink: #14171F;
+    --ink-soft: #1E2230;
+    --ink-line: rgba(255,255,255,0.08);
+    --ink-text: #9DA1B0;
+    --paper: #F2F3F6;
+    --card: #FFFFFF;
+    --line: #E4E5EB;
+    --text: #16181F;
+    --text-dim: #6B6F7D;
+    --gold: #B8842E;
+    --gold-strong: #96690F;
+    --gold-soft: #F6ECD9;
+    --win: #1F7A52;
+    --win-soft: #E1F3EA;
+    --loss: #B23B3B;
+    --loss-soft: #FBE8E8;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body, h1, h2, h3, p, ul, form { margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--paper);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .hidden { display: none !important; }
+
+  .app { display: flex; min-height: 100vh; }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar-scrim {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,11,16,0.45);
+    z-index: 90;
+  }
+  .sidebar-scrim.show { display: block; }
+
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--ink);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 26px 22px 20px;
+    border-bottom: 1px solid var(--ink-line);
+    margin-bottom: 10px;
+  }
+  .logo-mark {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #fff;
+    text-transform: uppercase;
+  }
+  .logo-mark .logo-dot { color: var(--gold); }
+  .logo-sub {
+    font-size: 11.5px;
+    color: var(--ink-text);
+    margin-top: 3px;
+    letter-spacing: 0.02em;
+  }
+  .nav-section { padding: 4px 12px; flex: 1; }
+  .nav-eyebrow {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #5C6070;
+    padding: 14px 14px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center;
+    border-left: 3px solid transparent;
+    padding: 10px 12px 10px 15px;
+    border-radius: 0 8px 8px 0;
+    color: var(--ink-text);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--ink-soft); color: #fff; }
+  .nav-item.active { background: var(--ink-soft); color: #fff; border-left-color: var(--gold); }
+  .nav-item .chev {
+    margin-left: auto;
+    font-size: 16px;
+    line-height: 1;
+    color: #5C6070;
+    transform: rotate(0deg);
+    transition: transform .18s ease;
+  }
+  .nav-item.expanded .chev { transform: rotate(90deg); color: var(--gold); }
+  .platform-group { margin-bottom: 1px; }
+  .sub-nav { overflow: hidden; max-height: 0; transition: max-height .2s ease; }
+  .sub-nav.open { max-height: 260px; }
+  .sub-item {
+    padding: 8px 14px 8px 34px;
+    border-radius: 0 8px 8px 0;
+    color: var(--ink-text);
+    cursor: pointer;
+    font-size: 13.5px;
+  }
+  .sub-item:hover { background: var(--ink-soft); color: #fff; }
+  .sub-item.active { color: #fff; font-weight: 600; background: var(--ink-soft); }
+  .sidebar-footer { padding: 14px 18px; border-top: 1px solid var(--ink-line); }
+  .reset-btn {
+    background: none; border: none; padding: 0;
+    color: #5C6070; font-size: 12px; font-family: var(--font-sans);
+    cursor: pointer;
+  }
+  .reset-btn:hover { color: var(--loss); }
+
+  /* ---------- MAIN ---------- */
+  .main-content { margin-left: var(--sidebar-w); flex: 1; padding: 34px 42px 60px; max-width: 1180px; }
+  .topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+  .menu-toggle {
+    display: none; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--card); cursor: pointer; font-size: 17px; color: var(--text); flex-shrink: 0;
+  }
+  .breadcrumb { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+  .breadcrumb .sep { color: var(--text-dim); font-weight: 500; margin: 0 6px; }
+  .breadcrumb .crumb-sub { color: var(--text-dim); font-weight: 500; }
+
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 26px; }
+  .summary-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 24px 22px; }
+  .summary-card .s-label {
+    font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-dim); margin-bottom: 12px;
+  }
+  .summary-card .s-value {
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    font-size: 30px; font-weight: 600; letter-spacing: -0.01em;
+  }
+  .s-inplay .s-value { color: var(--gold-strong); }
+  .s-profit .s-value.pos { color: var(--win); }
+  .s-profit .s-value.neg { color: var(--loss); }
+  .s-profit .s-value.zero { color: var(--text); }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 22px; }
+  .panel-header {
+    padding: 15px 22px; border-bottom: 1px solid var(--line);
+    font-weight: 700; font-size: 14.5px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 13px 22px; font-size: 14px; }
+  th {
+    color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 600; border-bottom: 1px solid var(--line);
+  }
+  tbody tr { border-bottom: 1px solid var(--line); cursor: pointer; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #FAFAFC; }
+  tr.total-row { font-weight: 700; cursor: default; background: #FAFAFD; }
+  tr.total-row:hover { background: #FAFAFD; }
+  td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  th.num { font-family: var(--font-sans); }
+  .val-pos { color: var(--win); }
+  .val-neg { color: var(--loss); }
+  .val-gold { color: var(--gold-strong); }
+  .desc-empty { color: var(--text-dim); font-style: italic; font-family: var(--font-sans); }
+
+  .btn {
+    border: none; border-radius: var(--radius-sm); padding: 10px 18px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: var(--font-sans);
+  }
+  .btn-primary { background: var(--gold-strong); color: #fff; }
+  .btn-primary:hover { background: #7C5308; }
+  .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+  .btn-ghost:hover { background: #F3F4F6; }
+  .btn-danger { background: transparent; color: var(--loss); border: 1px solid var(--loss-soft); }
+  .btn-danger:hover { background: var(--loss-soft); }
+
+  .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .btn-quick {
+    font-family: var(--font-sans);
+    font-size: 11.5px; font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid;
+    background: transparent;
+    white-space: nowrap;
+  }
+  .btn-quick-won { color: var(--win); border-color: var(--win-soft); }
+  .btn-quick-won:hover { background: var(--win-soft); }
+  .btn-quick-lost { color: var(--loss); border-color: var(--loss-soft); }
+  .btn-quick-lost:hover { background: var(--loss-soft); }
+
+  /* Signature element: stamped-ticket status marks */
+  .stamp {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border: 1.5px solid currentColor;
+    border-radius: 4px;
+    transform: rotate(-2deg);
+    white-space: nowrap;
+  }
+  .stamp-pending { color: var(--gold-strong); }
+  .stamp-won { color: var(--win); }
+  .stamp-lost { color: var(--loss); }
+
+  .empty-state { padding: 40px 22px; text-align: center; color: var(--text-dim); font-size: 14px; line-height: 1.6; }
+  .empty-state .empty-title { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; color: var(--text); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; }
+
+  /* ---------- FORMS (shared: quick-add panel + modal) ---------- */
+  .field label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  .field input, .field select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+    font-size: 14px; font-family: var(--font-sans); color: var(--text); background: #fff;
+  }
+  .field input:focus, .field select:focus { outline: 2px solid var(--gold-strong); outline-offset: 1px; border-color: var(--gold-strong); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .hint { font-size: 12px; color: var(--text-dim); margin-top: 5px; }
+
+  .quick-add-form { padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .quick-add-submit { align-self: flex-start; margin-top: 2px; }
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(15,17,25,.5); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+  .modal { background: #fff; border-radius: var(--radius); width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; }
+  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { font-size: 16.5px; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-dim); line-height: 1; padding: 4px; }
+  .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 15px; }
+  .modal-footer { padding: 16px 24px 22px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .modal-footer .right { display: flex; gap: 10px; margin-left: auto; }
+
+  :focus-visible { outline: 2px solid var(--gold-strong); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  @media (max-width: 860px) {
+    .sidebar { transform: translateX(-100%); transition: transform .22s ease; }
+    .sidebar.open { transform: translateX(0); }
+    .main-content { margin-left: 0; padding: 22px 18px 50px; }
+    .menu-toggle { display: flex; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .field-row, .field-row-3 { grid-template-columns: 1fr; }
+    th, td { padding: 12px 14px; }
+    .panel-header { padding: 14px 16px; }
+    .row-actions { justify-content: flex-start; flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar-scrim" id="scrim"></div>
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <div class="topbar">
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu">&#9776;</button>
+      <div class="breadcrumb" id="breadcrumb"></div>
+    </div>
+    <div id="mainContent"></div>
+  </main>
+</div>
+
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Nova Aposta</h3>
+      <button class="modal-close" id="modalCloseBtn" aria-label="Fechar">&times;</button>
+    </div>
+    <form id="betForm">
+      <div class="modal-body">
+        <div class="field">
+          <label for="fName">Nome da Aposta</label>
+          <input type="text" id="fName" placeholder="ex: Benfica vs Porto" required>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="fPlatform">Casa de Apostas</label>
+            <select id="fPlatform" required></select>
+          </div>
+          <div class="field">
+            <label for="fCategory">Categoria</label>
+            <select id="fCategory" required></select>
+          </div>
+        </div>
+        <div class="field-row-3">
+          <div class="field">
+            <label for="fStake">Valor (&euro;)</label>
+            <input type="number" id="fStake" step="0.01" min="0" required>
+          </div>
+          <div class="field">
+            <label for="fOdd">Odd</label>
+            <input type="number" id="fOdd" step="0.01" min="1" required>
+          </div>
+          <div class="field">
+            <label for="fDate">Data</label>
+            <input type="date" id="fDate" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fStatus">Estado</label>
+          <select id="fStatus">
+            <option value="pending">Em Aberto</option>
+            <option value="won">Ganha</option>
+            <option value="lost">Perdida</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger hidden" id="deleteBtn">Eliminar</button>
+        <div class="right">
+          <button type="button" class="btn btn-ghost" id="cancelBtn">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var PLATFORMS = ['Betclic', 'Placard', 'Solverde', 'Betify', 'Betanto'];
+  var CATEGORIES = [
+    { key: 'normais', label: 'Apostas Normais' },
+    { key: 'boosts', label: 'Boosts' },
+    { key: 'bonus', label: 'Bónus' },
+    { key: 'casino', label: 'Casino' }
+  ];
+  var STORAGE_KEY = 'apostas-bets';
+
+  var bets = [];
+  var view = { type: 'overview' };
+  var expanded = {};
+  var editingId = null;
+  var loaded = false;
+
+  /* ---------- Storage ---------- */
+  function migrateBet(b) {
+    if (b.name === undefined) b.name = b.description || '';
+    if (b.odd === undefined) {
+      if (b.status === 'won' && b.stake > 0 && typeof b.profit === 'number') {
+        b.odd = 1 + (b.profit / b.stake);
+      } else {
+        b.odd = 1;
+      }
+    }
+    delete b.description;
+    delete b.profit;
+    return b;
+  }
+
+  function loadData() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      var parsed = raw ? JSON.parse(raw) : [];
+      bets = parsed.map(migrateBet);
+    } catch (e) {
+      bets = [];
+    }
+    loaded = true;
+    return Promise.resolve();
+  }
+  function saveData() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(bets));
+    } catch (e) {
+      console.error('Não foi possível guardar os dados', e);
+    }
+    return Promise.resolve();
+  }
+
+  /* ---------- Helpers ---------- */
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function escapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = (s === null || s === undefined) ? '' : s;
+    return d.innerHTML;
+  }
+  function money(v) {
+    var n = Number(v) || 0;
+    return n.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' });
+  }
+  function fmtOdd(o) { return (Number(o) || 0).toFixed(2); }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    var parts = iso.split('-');
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
+  function todayISO() { return new Date().toISOString().slice(0, 10); }
+  function categoryLabel(key) {
+    for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].key === key) return CATEGORIES[i].label;
+    return key;
+  }
+  function findBet(id) {
+    for (var i = 0; i < bets.length; i++) if (bets[i].id === id) return bets[i];
+    return null;
+  }
+  function betsFor(platform, category) {
+    return bets.filter(function (b) {
+      return (!platform || b.platform === platform) && (!category || b.category === category);
+    });
+  }
+  function betProfit(b) {
+    if (b.status === 'won') return b.stake * b.odd - b.stake;
+    if (b.status === 'lost') return -b.stake;
+    return 0;
+  }
+  function moneyInPlay(list) {
+    return list.filter(function (b) { return b.status === 'pending'; })
+      .reduce(function (s, b) { return s + Number(b.stake || 0); }, 0);
+  }
+  function totalProfit(list) {
+    return list.filter(function (b) { return b.status !== 'pending'; })
+      .reduce(function (s, b) { return s + betProfit(b); }, 0);
+  }
+  function plClass(pl) { return pl > 0 ? 'val-pos' : (pl < 0 ? 'val-neg' : ''); }
+  function plSign(pl) { return pl > 0 ? '+' : ''; }
+  function platformOptionsHtml() { return PLATFORMS.map(function (p) { return '<option value="' + p + '">' + p + '</option>'; }).join(''); }
+  function categoryOptionsHtml() { return CATEGORIES.map(function (c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join(''); }
+  function nameCell(b) { return b.name ? escapeHtml(b.name) : '<span class="desc-empty">sem nome</span>'; }
+
+  /* ---------- Rendering ---------- */
+  function render() {
+    renderSidebar();
+    renderMain();
+  }
+
+  function renderSidebar() {
+    var sb = document.getElementById('sidebar');
+    var html = '';
+    html += '<div class="sidebar-logo">';
+    html += '  <div class="logo-mark">APOSTAS<span class="logo-dot">.</span></div>';
+    html += '  <div class="logo-sub">registo de apostas</div>';
+    html += '</div>';
+    html += '<div class="nav-section">';
+    html += '  <div class="nav-item nav-overview ' + (view.type === 'overview' ? 'active' : '') + '" tabindex="0" role="button" data-action="nav-overview">Visão Geral</div>';
+    html += '  <div class="nav-eyebrow">Casas de Apostas</div>';
+
+    PLATFORMS.forEach(function (p) {
+      var isExpanded = !!expanded[p];
+      var isPlatformActive = (view.type === 'platform' && view.platform === p);
+      html += '<div class="platform-group">';
+      html += '  <div class="nav-item ' + (isExpanded ? 'expanded' : '') + ' ' + (isPlatformActive ? 'active' : '') + '" tabindex="0" role="button" aria-expanded="' + isExpanded + '" data-action="nav-platform" data-platform="' + p + '">';
+      html += '    <span>' + p + '</span><span class="chev">&#8250;</span>';
+      html += '  </div>';
+      html += '  <div class="sub-nav ' + (isExpanded ? 'open' : '') + '">';
+      CATEGORIES.forEach(function (c) {
+        var isCatActive = (view.type === 'category' && view.platform === p && view.category === c.key);
+        html += '  <div class="sub-item ' + (isCatActive ? 'active' : '') + '" tabindex="0" role="button" data-action="nav-category" data-platform="' + p + '" data-category="' + c.key + '">' + c.label + '</div>';
+      });
+      html += '  </div>';
+      html += '</div>';
+    });
+
+    html += '</div>';
+    html += '<div class="sidebar-footer"><button type="button" class="reset-btn" data-action="reset-data">Limpar todos os dados</button></div>';
+    sb.innerHTML = html;
+  }
+
+  function renderMain() {
+    var el = document.getElementById('mainContent');
+    var bc = document.getElementById('breadcrumb');
+
+    if (!loaded) {
+      bc.textContent = '';
+      el.innerHTML = '<div class="empty-state">A carregar os teus dados&hellip;</div>';
+      return;
+    }
+
+    if (view.type === 'overview') {
+      bc.textContent = 'Visão Geral';
+      renderOverview(el);
+    } else if (view.type === 'platform') {
+      bc.textContent = view.platform;
+      renderPlatform(el, view.platform);
+    } else if (view.type === 'category') {
+      bc.innerHTML = escapeHtml(view.platform) + ' <span class="sep">/</span> <span class="crumb-sub">' + escapeHtml(categoryLabel(view.category)) + '</span>';
+      renderCategory(el, view.platform, view.category);
+    }
+  }
+
+  function summaryGridHtml(list) {
+    var inplay = moneyInPlay(list);
+    var pl = totalProfit(list);
+    var cls = pl > 0 ? 'pos' : (pl < 0 ? 'neg' : 'zero');
+    var html = '';
+    html += '<div class="summary-grid">';
+    html += '  <div class="summary-card s-inplay">';
+    html += '    <div class="s-label">Dinheiro em Jogo</div>';
+    html += '    <div class="s-value">' + money(inplay) + '</div>';
+    html += '  </div>';
+    html += '  <div class="summary-card s-profit">';
+    html += '    <div class="s-label">Lucro / Prejuízo</div>';
+    html += '    <div class="s-value ' + cls + '">' + plSign(pl) + money(pl) + '</div>';
+    html += '  </div>';
+    html += '</div>';
+    return html;
+  }
+
+  function quickAddFormHtml() {
+    var html = '';
+    html += '<div class="panel">';
+    html += '  <div class="panel-header"><span>Registar Aposta</span></div>';
+    html += '  <form id="quickAddForm" class="quick-add-form">';
+    html += '    <div class="field"><label for="qName">Nome da Aposta</label><input type="text" id="qName" placeholder="ex: Benfica vs Porto" required></div>';
+    html += '    <div class="field-row">';
+    html += '      <div class="field"><label for="qPlatform">Casa de Apostas</label><select id="qPlatform" required>' + platformOptionsHtml() + '</select></div>';
+    html += '      <div class="field"><label for="qCategory">Categoria</label><select id="qCategory" required>' + categoryOptionsHtml() + '</select></div>';
+    html += '    </div>';
+    html += '    <div class="field-row-3">';
+    html += '      <div class="field"><label for="qStake">Valor (&euro;)</label><input type="number" id="qStake" step="0.01" min="0" required></div>';
+    html += '      <div class="field"><label for="qOdd">Odd</label><input type="number" id="qOdd" step="0.01" min="1" placeholder="ex: 1.85" required></div>';
+    html += '      <div class="field"><label for="qDate">Data</label><input type="date" id="qDate" value="' + todayISO() + '" required></div>';
+    html += '    </div>';
+    html += '    <button type="submit" class="btn btn-primary quick-add-submit">Registar Aposta</button>';
+    html += '  </form>';
+    html += '</div>';
+    return html;
+  }
+
+  function pendingRowHtml(b, showPlatformCols) {
+    var potential = b.stake * b.odd;
+    var html = '<tr tabindex="0" role="button" data-action="edit-bet" data-id="' + b.id + '">';
+    html += '<td>' + nameCell(b) + '</td>';
+    if (showPlatformCols) {
+      html += '<td>' + b.platform + '</td>';
+      html += '<td>' + categoryLabel(b.category) + '</td>';
+    }
+    html += '<td class="num">' + money(b.stake) + '</td>';
+    html += '<td class="num">' + fmtOdd(b.odd) + '</td>';
+    html += '<td class="num val-gold">' + money(potential) + '</td>';
+    html += '<td><div class="row-actions">';
+    html += '<button type="button" class="btn-quick btn-quick-won" data-action="quick-won" data-id="' + b.id + '">Ganhou</button>';
+    html += '<button type="button" class="btn-quick btn-quick-lost" data-action="quick-lost" data-id="' + b.id + '">Perdeu</button>';
+    html += '</div></td>';
+    html += '</tr>';
+    return html;
+  }
+
+  function renderOverview(el) {
+    var all = bets;
+    var pending = all.filter(function (b) { return b.status === 'pending'; })
+      .slice().sort(function (a, b) { return (a.date < b.date) ? 1 : -1; });
+
+    var html = summaryGridHtml(all);
+    html += quickAddFormHtml();
+
+    html += '<div class="panel"><div class="panel-header">Apostas em Aberto</div>';
+    if (pending.length === 0) {
+      html += '<div class="empty-state"><div class="empty-title">Sem apostas em aberto</div>Regista uma aposta acima para começares a acompanhar.</div>';
+    } else {
+      html += '<table><thead><tr><th>Nome</th><th>Casa</th><th>Categoria</th><th class="num">Valor</th><th class="num">Odd</th><th class="num">Retorno Potencial</th><th></th></tr></thead><tbody>';
+      pending.forEach(function (b) { html += pendingRowHtml(b, true); });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+
+    html += '<div class="panel"><div class="panel-header">Por Casa de Apostas</div><table><thead><tr><th>Casa de Apostas</th><th class="num">Dinheiro em Jogo</th><th class="num">Lucro/Prejuízo</th></tr></thead><tbody>';
+    PLATFORMS.forEach(function (p) {
+      var list = betsFor(p, null);
+      var inplay = moneyInPlay(list);
+      var pl = totalProfit(list);
+      html += '<tr tabindex="0" role="button" data-action="goto-platform" data-platform="' + p + '">';
+      html += '  <td>' + p + '</td>';
+      html += '  <td class="num val-gold">' + money(inplay) + '</td>';
+      html += '  <td class="num ' + plClass(pl) + '">' + plSign(pl) + money(pl) + '</td>';
+      html += '</tr>';
+    });
+    var totalInplay = moneyInPlay(all);
+    var totalPl = totalProfit(all);
+    html += '<tr class="total-row"><td>Total</td><td class="num">' + money(totalInplay) + '</td><td class="num ' + plClass(totalPl) + '">' + plSign(totalPl) + money(totalPl) + '</td></tr>';
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  }
+
+  function renderPlatform(el, platform) {
+    var list = betsFor(platform, null);
+    var html = summaryGridHtml(list);
+    html += '<div class="panel"><div class="panel-header">Por Categoria</div><table><thead><tr><th>Categoria</th><th class="num">Dinheiro em Jogo</th><th class="num">Lucro/Prejuízo</th></tr></thead><tbody>';
+    CATEGORIES.forEach(function (c) {
+      var clist = betsFor(platform, c.key);
+      var inplay = moneyInPlay(clist);
+      var pl = totalProfit(clist);
+      html += '<tr tabindex="0" role="button" data-action="nav-category" data-platform="' + platform + '" data-category="' + c.key + '">';
+      html += '  <td>' + c.label + '</td>';
+      html += '  <td class="num val-gold">' + money(inplay) + '</td>';
+      html += '  <td class="num ' + plClass(pl) + '">' + plSign(pl) + money(pl) + '</td>';
+      html += '</tr>';
+    });
+    var totalInplay = moneyInPlay(list);
+    var totalPl = totalProfit(list);
+    html += '<tr class="total-row"><td>Total</td><td class="num">' + money(totalInplay) + '</td><td class="num ' + plClass(totalPl) + '">' + plSign(totalPl) + money(totalPl) + '</td></tr>';
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  }
+
+  function statusStamp(status) {
+    if (status === 'pending') return '<span class="stamp stamp-pending">Em Aberto</span>';
+    if (status === 'won') return '<span class="stamp stamp-won">Ganha</span>';
+    return '<span class="stamp stamp-lost">Perdida</span>';
+  }
+
+  function renderCategory(el, platform, category) {
+    var list = betsFor(platform, category).slice().sort(function (a, b) {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return a.id < b.id ? 1 : -1;
+    });
+    var html = summaryGridHtml(list);
+    html += '<div class="panel">';
+    html += '  <div class="panel-header"><span>Apostas Registadas</span><button type="button" class="btn btn-primary" data-action="add-bet">+ Adicionar Aposta</button></div>';
+    if (list.length === 0) {
+      html += '<div class="empty-state"><div class="empty-title">Sem registos</div>Ainda não tens apostas guardadas aqui.<br>Regista uma na Visão Geral ou clica em &ldquo;Adicionar Aposta&rdquo;.</div>';
+    } else {
+      html += '<table><thead><tr><th>Nome</th><th>Data</th><th class="num">Valor</th><th class="num">Odd</th><th>Estado</th><th class="num">Lucro/Prejuízo</th></tr></thead><tbody>';
+      list.forEach(function (b) {
+        var pl = betProfit(b);
+        var lastCell;
+        if (b.status === 'pending') {
+          lastCell = '<div class="row-actions"><button type="button" class="btn-quick btn-quick-won" data-action="quick-won" data-id="' + b.id + '">Ganhou</button><button type="button" class="btn-quick btn-quick-lost" data-action="quick-lost" data-id="' + b.id + '">Perdeu</button></div>';
+        } else {
+          lastCell = '<span class="' + plClass(pl) + '">' + plSign(pl) + money(pl) + '</span>';
+        }
+        html += '<tr tabindex="0" role="button" data-action="edit-bet" data-id="' + b.id + '">';
+        html += '  <td>' + nameCell(b) + '</td>';
+        html += '  <td>' + fmtDate(b.date) + '</td>';
+        html += '  <td class="num">' + money(b.stake) + '</td>';
+        html += '  <td class="num">' + fmtOdd(b.odd) + '</td>';
+        html += '  <td>' + statusStamp(b.status) + '</td>';
+        html += '  <td class="num">' + lastCell + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  /* ---------- Modal ---------- */
+  function populateModalSelects() {
+    document.getElementById('fPlatform').innerHTML = platformOptionsHtml();
+    document.getElementById('fCategory').innerHTML = categoryOptionsHtml();
+  }
+
+  function openAddModal() {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Nova Aposta';
+    document.getElementById('deleteBtn').classList.add('hidden');
+    document.getElementById('fName').value = '';
+    document.getElementById('fPlatform').value = view.platform;
+    document.getElementById('fCategory').value = view.category;
+    document.getElementById('fStake').value = '';
+    document.getElementById('fOdd').value = '';
+    document.getElementById('fDate').value = todayISO();
+    document.getElementById('fStatus').value = 'pending';
+    showModal();
+  }
+
+  function openEditModal(id) {
+    var b = findBet(id);
+    if (!b) return;
+    editingId = id;
+    document.getElementById('modalTitle').textContent = 'Editar Aposta';
+    document.getElementById('deleteBtn').classList.remove('hidden');
+    document.getElementById('fName').value = b.name || '';
+    document.getElementById('fPlatform').value = b.platform;
+    document.getElementById('fCategory').value = b.category;
+    document.getElementById('fStake').value = b.stake;
+    document.getElementById('fOdd').value = b.odd;
+    document.getElementById('fDate').value = b.date;
+    document.getElementById('fStatus').value = b.status;
+    showModal();
+  }
+
+  function showModal() {
+    document.getElementById('modalOverlay').classList.remove('hidden');
+    document.getElementById('fName').focus();
+  }
+  function hideModal() { document.getElementById('modalOverlay').classList.add('hidden'); }
+
+  function handleFormSubmit(e) {
+    e.preventDefault();
+    var name = document.getElementById('fName').value.trim();
+    var platform = document.getElementById('fPlatform').value;
+    var category = document.getElementById('fCategory').value;
+    var stake = parseFloat(document.getElementById('fStake').value) || 0;
+    var odd = parseFloat(document.getElementById('fOdd').value) || 1;
+    var date = document.getElementById('fDate').value || todayISO();
+    var status = document.getElementById('fStatus').value;
+
+    if (editingId) {
+      for (var i = 0; i < bets.length; i++) {
+        if (bets[i].id === editingId) {
+          bets[i] = { id: editingId, name: name, platform: platform, category: category, stake: stake, odd: odd, date: date, status: status };
+          break;
+        }
+      }
+    } else {
+      bets.push({ id: uid(), name: name, platform: platform, category: category, stake: stake, odd: odd, date: date, status: status });
+    }
+    saveData().then(function () {
+      hideModal();
+      render();
+    });
+  }
+
+  function handleDelete() {
+    if (!editingId) return;
+    if (!confirm('Tens a certeza que queres eliminar esta aposta?')) return;
+    bets = bets.filter(function (b) { return b.id !== editingId; });
+    saveData().then(function () {
+      hideModal();
+      render();
+    });
+  }
+
+  function handleResetData() {
+    if (!confirm('Isto vai apagar TODAS as apostas guardadas. Continuar?')) return;
+    bets = [];
+    saveData().then(render);
+  }
+
+  function handleQuickAddSubmit(form) {
+    var name = document.getElementById('qName').value.trim();
+    var platform = document.getElementById('qPlatform').value;
+    var category = document.getElementById('qCategory').value;
+    var stake = parseFloat(document.getElementById('qStake').value) || 0;
+    var odd = parseFloat(document.getElementById('qOdd').value) || 1;
+    var date = document.getElementById('qDate').value || todayISO();
+    bets.push({ id: uid(), name: name, platform: platform, category: category, stake: stake, odd: odd, date: date, status: 'pending' });
+    saveData().then(render);
+  }
+
+  function quickResolve(id, outcome) {
+    var b = findBet(id);
+    if (!b) return;
+    b.status = outcome;
+    saveData().then(render);
+  }
+
+  /* ---------- Navigation ---------- */
+  function gotoOverview() { view = { type: 'overview' }; render(); }
+  function gotoPlatform(p, forceExpand) {
+    if (forceExpand) { expanded[p] = true; }
+    else { expanded[p] = !expanded[p]; }
+    view = { type: 'platform', platform: p };
+    render();
+  }
+  function gotoCategory(p, c) {
+    expanded[p] = true;
+    view = { type: 'category', platform: p, category: c };
+    render();
+  }
+
+  /* ---------- Event delegation ---------- */
+  function handleAction(t) {
+    var action = t.getAttribute('data-action');
+    if (action === 'nav-overview') { gotoOverview(); closeMobileSidebar(); }
+    else if (action === 'nav-platform') { gotoPlatform(t.getAttribute('data-platform'), false); closeMobileSidebar(); }
+    else if (action === 'goto-platform') { gotoPlatform(t.getAttribute('data-platform'), true); closeMobileSidebar(); }
+    else if (action === 'nav-category') { gotoCategory(t.getAttribute('data-platform'), t.getAttribute('data-category')); closeMobileSidebar(); }
+    else if (action === 'add-bet') { openAddModal(); }
+    else if (action === 'edit-bet') { openEditModal(t.getAttribute('data-id')); }
+    else if (action === 'reset-data') { handleResetData(); }
+    else if (action === 'quick-won') { quickResolve(t.getAttribute('data-id'), 'won'); }
+    else if (action === 'quick-lost') { quickResolve(t.getAttribute('data-id'), 'lost'); }
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-action]');
+    if (!t) return;
+    handleAction(t);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-action]')) {
+      e.preventDefault();
+      handleAction(e.target);
+    }
+  });
+
+  document.addEventListener('submit', function (e) {
+    if (e.target && e.target.id === 'quickAddForm') {
+      e.preventDefault();
+      handleQuickAddSubmit(e.target);
+    }
+  });
+
+  document.getElementById('betForm').addEventListener('submit', handleFormSubmit);
+  document.getElementById('cancelBtn').addEventListener('click', hideModal);
+  document.getElementById('modalCloseBtn').addEventListener('click', hideModal);
+  document.getElementById('deleteBtn').addEventListener('click', handleDelete);
+  document.getElementById('modalOverlay').addEventListener('click', function (e) {
+    if (e.target.id === 'modalOverlay') hideModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !document.getElementById('modalOverlay').classList.contains('hidden')) hideModal();
+  });
+
+  var sidebarEl = document.getElementById('sidebar');
+  var scrimEl = document.getElementById('scrim');
+  document.getElementById('menuToggle').addEventListener('click', function () {
+    sidebarEl.classList.toggle('open');
+    scrimEl.classList.toggle('show');
+  });
+  scrimEl.addEventListener('click', closeMobileSidebar);
+  function closeMobileSidebar() {
+    sidebarEl.classList.remove('open');
+    scrimEl.classList.remove('show');
+  }
+
+  /* ---------- Init ---------- */
+  function init() {
+    populateModalSelects();
+    render();
+    loadData().then(render);
+  }
+  init();
+})();
+</script>
+</body>
+</html>
